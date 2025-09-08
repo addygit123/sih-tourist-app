@@ -1,29 +1,51 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import * as SecureStore from 'expo-secure-store';
+import { createContext, useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
 import 'react-native-reanimated';
+import './global.css';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 
+export const ProfileContext = createContext<{ profile: boolean, setProfile: (p: boolean) => void }>({ profile: false, setProfile: () => {} });
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState(false)
+
+   useEffect(() => {
+    const checkProfile = async () => {
+      const p = await SecureStore.getItemAsync('profile');
+      console.log(p);
+      
+      if(p === null) {setProfile(false)}
+      else {setProfile(true)}
+      setLoading(false);
+    };
+    checkProfile();
   });
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
+   if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading</Text>
+      </View>
+    );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ProfileContext.Provider value={{ profile, setProfile }}>
+      <ThemeProvider value={DefaultTheme}>
+        <Stack>
+          <Stack.Protected guard={profile}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack.Protected>
+
+          <Stack.Protected guard={!profile}>
+            <Stack.Screen name="setup" options={{ headerShown: false }} />
+          </Stack.Protected>
+        </Stack>
+      </ThemeProvider>
+    </ ProfileContext.Provider>
+
   );
 }
