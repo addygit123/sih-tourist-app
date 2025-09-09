@@ -40,8 +40,8 @@ const Profile = () => {
               </View>
 
               <View className='flex flex-row gap-3 items-center justify-between w-[80%]'>
-                <Text className='text-lg font-semibold'>Email</Text>
-                <Text className='text-lg'>{tourist.email}</Text>
+                <Text className='text-lg font-semibold'>Tourist Id</Text>
+                <Text className='text-lg'>{tourist.id}</Text>
               </View>
 
 

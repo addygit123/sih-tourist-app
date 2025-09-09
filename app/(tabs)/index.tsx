@@ -1,7 +1,9 @@
 import sos from '@/assets/images/sos.png'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import * as Battery from 'expo-battery'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
+import * as Network from 'expo-network'
 import * as SecureStore from 'expo-secure-store'
 import * as SMS from 'expo-sms'
 import * as TaskManager from 'expo-task-manager'
@@ -35,7 +37,7 @@ configureReanimatedLogger({
     let newdata =  {...profile, 'lastlocation': loc[0].formattedAddress}
     newdata = JSON.stringify(newdata)
     await SecureStore.setItemAsync('profile', newdata)
-    DeviceEventEmitter.emit('newlocation', loc[0].formattedAddress)
+    DeviceEventEmitter.emit('newlocation', [loc[0].formattedAddress, cord.latitude, cord.longitude, profile.id])
     
     console.log(cord.latitude, cord.longitude);
   })
@@ -47,11 +49,18 @@ const Index = () => {
   const [fetchnow, setFetchNow] = useState(false)
   const [showmodal, setShowModal] = useState(false)
   const [time, setTimer] = useState(0)
+  const [id, setId] = useState('')
 
   const { contacts } = useContext(ContactsContext);
 
   const sendsms = async ()=>{
-    //isme abhi server ko status update krna bacha h
+    //isme abhi server ko status update krna bacha h 
+    await fetch('http://192.168.1.9:5000/api/tourists/makeunsafe', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id})
+    })
+
     const isAvailable = await SMS.isAvailableAsync();
     if (isAvailable) {
       let data = await SecureStore.getItemAsync('contacts')
@@ -127,10 +136,11 @@ const Index = () => {
       if(p !== null){
         const data = JSON.parse(p)
         setTourist(data.name)
+        setId(data.id)
       }
     }
 
-    const fetch = async () => {
+    const fetchh = async () => {
       console.log('helo');
       
       const loc = await Location.getCurrentPositionAsync()
@@ -175,7 +185,7 @@ const Index = () => {
         Alert.alert('background location was denied');
       }
 
-      await fetch()
+      await fetchh()
       await getprofile()
       await Location.startLocationUpdatesAsync('getnewlocation', {
         deferredUpdatesDistance:5,
@@ -189,8 +199,25 @@ const Index = () => {
     }
     setup()
 
-    const sub = DeviceEventEmitter.addListener('newlocation', (data : string) =>{
-      setLastLocation(data)
+    const sub = DeviceEventEmitter.addListener('newlocation', async (data : string[]) => { //address, lat, longn, id
+      setLastLocation(data[0])
+      console.log('at emitter...');
+      
+      const blevel = await Battery.getBatteryLevelAsync()
+      const network = (await Network.getNetworkStateAsync()).isInternetReachable
+      const send = {
+        id: data[3],
+        lat:data[1],
+        long: data[2],
+        blevel,network
+      }
+
+      const res = await fetch('http://192.168.1.9:5000/api/tourists/updatelocation', {
+        method: 'POST',
+        headers: {'Content-Type' : 'application/json'},
+        body: JSON.stringify(send)
+      })
+      
     })
 
     return () => {
@@ -221,7 +248,7 @@ const Index = () => {
               </TouchableOpacity>
             </View>
           </View>
-          <View className=' flex mt-12 items-center'>
+          <View className=' flex mt-7 items-center'>
             <TouchableOpacity onPress={startTimer}>
               <Image source={sos} alt='sos' style={{ width: 180, height: 180,  borderRadius: 999, borderWidth: 8, borderColor: 'red', }} contentFit="cover"></Image>
             </TouchableOpacity>
