@@ -1,110 +1,100 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import * as SecureStore from "expo-secure-store";
+import React, { useContext, useEffect, useState } from "react";
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ContactsContext } from "./_layout";
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+const Explore = () => {
+  const { contacts, setContacts } = useContext(ContactsContext);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newNumber, setNewNumber] = useState("");
 
-export default function TabTwoScreen() {
+  useEffect(() => {
+    const getContacts = async () => {
+      let data = await SecureStore.getItemAsync("contacts");
+      if (data !== null) {
+        setContacts(JSON.parse(data));
+      }
+    };
+    getContacts();
+  }, []);
+
+  const saveContacts = async (updated: typeof contacts) => {
+    setContacts(updated);
+    await SecureStore.setItemAsync("contacts", JSON.stringify(updated));
+  };
+
+  const addContact = () => {
+    if (!newName || !newNumber) return;
+    if (contacts.length >= 5) return alert("Max 5 contacts allowed!");
+    const updated = [...contacts, { name: newName, number: newNumber }];
+    saveContacts(updated);
+    setNewName("");
+    setNewNumber("");
+    setModalVisible(false);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
-  );
-}
+    <SafeAreaView className="flex-1 bg-gray-100">
+      <View className="p-4 w-full">
+        <Text className="text-2xl font-bold">Add Contacts</Text>
+      </View>
+      <ScrollView className="flex-1 p-4">
+        {contacts.length === 0 ? (
+          <View className="flex-1 justify-center items-center"><Text className="text-gray-500 ">No contacts added </Text></View>
+        ) : (
+          contacts.map((c, idx) => (
+            <View key={idx} className="w-full p-4 mb-2 bg-white rounded-2xl shadow">
+              <Text className="text-lg font-semibold">{c.name}</Text>
+              <Text className="text-gray-600">{c.number}</Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});
+      <TouchableOpacity onPress={() => setModalVisible(true)} className="m-4 p-4 rounded-2xl bg-blue-500" disabled={contacts.length >= 5} >
+        <Text className="text-white text-center text-lg font-bold">
+          {contacts.length >= 5 ? "Limit Reached" : "Add Contact"}
+        </Text>
+      </TouchableOpacity>
+
+      <Modal transparent visible={modalVisible} animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white p-6 rounded-2xl w-4/5">
+            <Text className="text-xl font-bold mb-4">Add New Contact</Text>
+            <TextInput
+              placeholder="Name"
+              value={newName}
+              onChangeText={setNewName}
+              className="border border-gray-300 rounded-lg p-2 mb-3"
+            />
+            <TextInput
+              placeholder="Phone Number"
+              keyboardType="phone-pad"
+              value={newNumber}
+              onChangeText={setNewNumber}
+              className="border border-gray-300 rounded-lg p-2 mb-3"
+            />
+            <View className="flex-row justify-between">
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                className="px-4 py-2 rounded-lg bg-gray-400"
+              >
+                <Text className="text-white">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={addContact}
+                className="px-4 py-2 rounded-lg bg-blue-500"
+              >
+                <Text className="text-white">Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+export default Explore;
