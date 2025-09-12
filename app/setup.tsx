@@ -22,7 +22,7 @@ export default function SetupScreen() {
     }
 
     try {
-      const res = await fetch('http://192.168.1.9:5000/api/tourists/getatourist', {
+      const res = await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/getatourist`, {
         method:'POST',
         headers:{'Content-Type': 'application/json'},
         body:JSON.stringify({id})

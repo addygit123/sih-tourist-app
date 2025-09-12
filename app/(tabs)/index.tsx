@@ -55,7 +55,7 @@ const Index = () => {
 
   const sendsms = async ()=>{
     //isme abhi server ko status update krna bacha h 
-    await fetch('http://192.168.1.9:5000/api/tourists/makeunsafe', {
+    await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/makeunsafe`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({id})
@@ -212,7 +212,7 @@ const Index = () => {
         blevel,network
       }
 
-      const res = await fetch('http://192.168.1.9:5000/api/tourists/updatelocation', {
+      const res = await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/updatelocation`, {
         method: 'POST',
         headers: {'Content-Type' : 'application/json'},
         body: JSON.stringify(send)
