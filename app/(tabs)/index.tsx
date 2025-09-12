@@ -29,15 +29,22 @@ configureReanimatedLogger({
       Location.stopLocationUpdatesAsync('getnewlocation')
       return;
     }
+    const net = (await Network.getNetworkStateAsync()).isInternetReachable
 
-    let cord = (data!.locations[0]).coords
-    const loc = await Location.reverseGeocodeAsync({latitude: cord.latitude, longitude:cord.longitude})
     const p = await SecureStore.getItemAsync('profile')
     let profile = JSON.parse(p!)
-    let newdata =  {...profile, 'lastlocation': loc[0].formattedAddress}
-    newdata = JSON.stringify(newdata)
-    await SecureStore.setItemAsync('profile', newdata)
-    DeviceEventEmitter.emit('newlocation', [loc[0].formattedAddress, cord.latitude, cord.longitude, profile.id])
+    const oldloc = profile.lastlocation
+    let cord = (data!.locations[0]).coords
+    let newloc = oldloc
+    if(net){
+      newloc = await Location.reverseGeocodeAsync({latitude: cord.latitude, longitude:cord.longitude})  
+      newloc = newloc[0].formattedAddress
+      let newdata =  {...profile, 'lastlocation': newloc}
+      newdata = JSON.stringify(newdata)
+      await SecureStore.setItemAsync('profile', newdata)
+    }
+
+    DeviceEventEmitter.emit('newlocation', [newloc, cord.latitude, cord.longitude, profile.id])
     
     console.log(cord.latitude, cord.longitude);
   })
@@ -203,20 +210,45 @@ const Index = () => {
       setLastLocation(data[0])
       console.log('at emitter...');
       
-      const blevel = await Battery.getBatteryLevelAsync()
+      const t = await SecureStore.getItemAsync('cached');
+      let cache = null;
+      if(t !== null){ cache = JSON.parse(t)}
+      console.log('location cache : ' , cache);
+      
+        
       const network = (await Network.getNetworkStateAsync()).isInternetReachable
-      const send = {
-        id: data[3],
-        lat:data[1],
-        long: data[2],
-        blevel,network
-      }
+      if(network){
+        const blevel = await Battery.getBatteryLevelAsync()
+        console.log('network availbe..')
+        
+        const send = {
+          id: data[3],
+          lat:data[1],
+          long: data[2],
+          blevel,network,
+          cache: cache
+        }
 
-      const res = await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/updatelocation`, {
-        method: 'POST',
-        headers: {'Content-Type' : 'application/json'},
-        body: JSON.stringify(send)
-      })
+        const res = await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/updatelocation`, {
+          method: 'POST',
+          headers: {'Content-Type' : 'application/json'},
+          body: JSON.stringify(send)
+        })
+
+        if(cache !== null){
+          await SecureStore.deleteItemAsync('cached')
+        }
+      }
+      else{
+        if(cache === null) cache = [];
+        const o = [data[1], data[2]]
+        cache = [...cache, o]
+        cache = JSON.stringify(cache)
+        console.log('updating cache...');
+        
+        await SecureStore.setItemAsync('cached', cache)
+      }
+      
       
     })
 
