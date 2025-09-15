@@ -1,4 +1,5 @@
 import sos from '@/assets/images/sos.png'
+import { useprofileStore } from '@/profileStore'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
 import * as Battery from 'expo-battery'
 import { Image } from 'expo-image'
@@ -7,14 +8,13 @@ import * as Network from 'expo-network'
 import * as SecureStore from 'expo-secure-store'
 import * as SMS from 'expo-sms'
 import * as TaskManager from 'expo-task-manager'
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Alert, DeviceEventEmitter, Modal, Text, TouchableOpacity, View } from 'react-native'
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ContactsContext } from './_layout'
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -30,21 +30,15 @@ configureReanimatedLogger({
       return;
     }
     const net = (await Network.getNetworkStateAsync()).isInternetReachable
-
-    const p = await SecureStore.getItemAsync('profile')
-    let profile = JSON.parse(p!)
-    const oldloc = profile.lastlocation
     let cord = (data!.locations[0]).coords
-    let newloc = oldloc
+    let newloc : Location.LocationGeocodedAddress[] | string | null = [];
+
     if(net){
       newloc = await Location.reverseGeocodeAsync({latitude: cord.latitude, longitude:cord.longitude})  
       newloc = newloc[0].formattedAddress
-      let newdata =  {...profile, 'lastlocation': newloc}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
     }
 
-    DeviceEventEmitter.emit('newlocation', [newloc, cord.latitude, cord.longitude, profile.id])
+    DeviceEventEmitter.emit('newlocation', [newloc, cord.latitude, cord.longitude, useprofileStore.getState().profile.id])
     
     console.log(cord.latitude, cord.longitude);
   })
@@ -57,11 +51,11 @@ const Index = () => {
   const [showmodal, setShowModal] = useState(false)
   const [time, setTimer] = useState(0)
   const [id, setId] = useState('')
+  const {profile, setProfile} = useprofileStore()
 
-  const { contacts } = useContext(ContactsContext);
+  const { contacts } = profile;
 
   const sendsms = async ()=>{
-    //isme abhi server ko status update krna bacha h 
     await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/makeunsafe`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -70,16 +64,12 @@ const Index = () => {
 
     const isAvailable = await SMS.isAvailableAsync();
     if (isAvailable) {
-      let data = await SecureStore.getItemAsync('contacts')
-      if(data !== null){
-        let newdata = JSON.parse(data)
-        let parsed = newdata!.map((item : {'name' :string, 'number': string}) => {
-          return item.number
+      let {contacts} = profile
+      if(contacts !== null){
+        const parsed = profile.contacts.map((item: string[]) => {
+          return item[1]
         })
-
-        await SMS.sendSMSAsync(parsed, `${tourist} is in danger, last know location is : ${lastLocation}`)
-        console.log('parsed', parsed);
-        
+        await SMS.sendSMSAsync(parsed, `${tourist} is in danger, last know location is : ${lastLocation}`) 
       }
       else{
         Alert.alert('NNo emergency contacts available')
@@ -125,12 +115,7 @@ const Index = () => {
     setFetchNow(true)
     try {
       const loc = await Location.getCurrentPositionAsync()
-      const p = await SecureStore.getItemAsync('profile')
-      const data = await JSON.parse(p!)
       const add = await Location.reverseGeocodeAsync({latitude: loc.coords.latitude, longitude: loc.coords.longitude})
-      let newdata = {...data, 'lastlocation': (add[0]).formattedAddress}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
       setLastLocation((add[0]).formattedAddress)
     }
     finally{
@@ -139,44 +124,18 @@ const Index = () => {
   }
 
    const getprofile = async ()=>{
-      const p = await SecureStore.getItemAsync('profile')
-      if(p !== null){
-        const data = JSON.parse(p)
-        setTourist(data.name)
-        setId(data.id)
+      if(profile !== null){
+        setTourist(profile.name)
+        setId(profile.id)
       }
     }
 
     const fetchh = async () => {
-      console.log('helo');
-      
       const loc = await Location.getCurrentPositionAsync()
-      const p = await SecureStore.getItemAsync('profile')
-      const data = await JSON.parse(p!)
       const add = await Location.reverseGeocodeAsync({latitude: loc.coords.latitude, longitude: loc.coords.longitude})
-      let newdata = {...data, 'lastlocation': (add[0]).formattedAddress}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
       setLastLocation((add[0]).formattedAddress)
     }
-    //  (async () => {
 
-    //   request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION).then((status) => {
-    //     console.log(status);
-    //     if(status === RESULTS.GRANTED){
-    //       request(PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION).then((status) => {
-    //         console.log(status);
-    //       })
-
-    //       request(PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION).then((status) => {
-    //         console.log(status);
-    //       })
-    //     }
-        
-    //   })
-    
-    //   })();
-      
 
   useEffect(() => {
 
@@ -192,8 +151,8 @@ const Index = () => {
         Alert.alert('background location was denied');
       }
 
-      await fetchh()
       await getprofile()
+      await fetchh()
       await Location.startLocationUpdatesAsync('getnewlocation', {
         deferredUpdatesDistance:5,
         foregroundService: {
