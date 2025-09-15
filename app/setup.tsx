@@ -1,10 +1,17 @@
 import { useprofileStore } from '@/profileStore';
-import { Image } from 'expo-image';
+import {
+  Blur,
+  Canvas,
+  RadialGradient,
+  Rect
+} from "@shopify/react-native-skia";
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+
 export default function SetupScreen() {
+  const {width: WindowWidth, height: WindowHeight} = Dimensions.get('window')
   const {setProfile, setLogin} = useprofileStore()
 
   const [loading, setLoading] = useState(false)
@@ -54,37 +61,36 @@ export default function SetupScreen() {
       setLoading(false)
     }
   };
+
 return (
    <KeyboardAwareScrollView contentContainerClassName='flex-1 justify-center relative  items-center'>
-
-        <View className=' w-full  relative justify-center items-center '>
-          <Image
-            style={{ width: "100%", height: "100%", position:'absolute', backgroundColor:'red'}}
-            contentFit="cover"
-            blurRadius={1}
-          />
-            
+    <Canvas style={{ width: '100%', height: '100%'}}>
+      <Rect x={0} y={0} width={WindowWidth} height={WindowHeight}>
+        <RadialGradient c={{x: WindowWidth / 2, y: WindowHeight / 2}} r={WindowWidth/2} colors={['violet', 'white']}></RadialGradient>
+      </Rect>
+      <Blur blur={4}></Blur>
+    </Canvas>
+        <View className=' w-[80%]  absolute justify-center items-center '>
             <Text className="text-3xl font-bold text-center mb-8 ">Log In</Text>
-
             <View className='px-8 w-full'>
-              <Text className="mb-2 font-medium">Toursit Id </Text>
+              <Text className="mb-2 font-semibold">Toursit Id </Text>
               <TextInput
-                  className="border border-gray-300 rounded-lg p-3 mb-5"
+                  className="border border-gray-400 rounded-lg font-medium p-3 mb-5"
                   value={id}
                   onChangeText={setId}
                   placeholder="Enter your Tourist Id"
               />
 
-              <Text className="mb-2 font-medium">Password </Text>
+              <Text className="mb-2 font-semibold">Password </Text>
               <TextInput
-                  className="border border-gray-300 rounded-lg p-3 mb-5"
+                  className="border border-gray-400 font-medium rounded-lg p-3 mb-5"
                   value={pass}
                   onChangeText={setPass}
                   keyboardType='phone-pad'
                   placeholder="Enter password"
               />
 
-              <TouchableOpacity onPress={getTourist} className='self-center w-32 rounded-lg mt-5 bg-blue-500 p-2 flex justify-center items-center'>
+              <TouchableOpacity onPress={getTourist} className='self-center w-32 rounded-lg mt-9 bg-purple-500 p-2 flex justify-center items-center'>
                 {loading ===true ? <ActivityIndicator size='small'  color={'white'}/> : <Text className='text-lg text-white'>Log In</Text>}
               </TouchableOpacity>
             </View>

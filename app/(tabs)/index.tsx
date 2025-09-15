@@ -1,15 +1,14 @@
-import sos from '@/assets/images/sos.png'
 import { useprofileStore } from '@/profileStore'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import { Blur, Canvas, Circle, Image, RadialGradient, useImage } from '@shopify/react-native-skia'
 import * as Battery from 'expo-battery'
-import { Image } from 'expo-image'
 import * as Location from 'expo-location'
 import * as Network from 'expo-network'
 import * as SecureStore from 'expo-secure-store'
 import * as SMS from 'expo-sms'
 import * as TaskManager from 'expo-task-manager'
 import React, { useEffect, useRef, useState } from 'react'
-import { Alert, DeviceEventEmitter, Modal, Text, TouchableOpacity, View } from 'react-native'
+import { Alert, DeviceEventEmitter, Dimensions, Modal, Text, TouchableOpacity, View } from 'react-native'
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -44,6 +43,7 @@ configureReanimatedLogger({
   })
 
 const Index = () => {
+  const sos = useImage(require('@/assets/images/sos.png'))
   const timer = useRef<number|null>(null)
   const [lastLocation, setLastLocation] = useState<string | null>('')
   const [tourist, setTourist] = useState('');
@@ -51,8 +51,8 @@ const Index = () => {
   const [showmodal, setShowModal] = useState(false)
   const [time, setTimer] = useState(0)
   const [id, setId] = useState('')
-  const {profile, setProfile} = useprofileStore()
-
+  const {profile, setProfile, setCoords} = useprofileStore()
+  const {width: screenWidth, height: screenHeight} = Dimensions.get('window')
   const { contacts } = profile;
 
   const sendsms = async ()=>{
@@ -168,7 +168,7 @@ const Index = () => {
     const sub = DeviceEventEmitter.addListener('newlocation', async (data : string[]) => { //address, lat, longn, id
       setLastLocation(data[0])
       console.log('at emitter...');
-      
+      setCoords(data[1], data[2])
       const t = await SecureStore.getItemAsync('cached');
       let cache = null;
       if(t !== null){ cache = JSON.parse(t)}
@@ -225,24 +225,48 @@ const Index = () => {
       <View className="p-4 px-6 w-full bg-white">
         <Text className="text-3xl font-bold" >Tourist App</Text>
       </View>
-      <View className="flex-1 bg-gray-100">
+      <View className="flex-1 mt-2 bg-gray-100">
         <View className='flex gap-4 justify-center'>
           <View className='w-full px-7 py-4'>
             <Text className='text-2xl '>Hello, {tourist} !</Text>
           </View>
           <View className='w-full px-7 py-2 '>
             <Text className='text-xl'>Current Location</Text>
-            <View className='flex flex-row mt-6 justify-center items-center'>
+            <View className='flex flex-row mt-5 justify-center items-center'>
               <Text className='text-md w-[90%] text-gray-500'>{lastLocation === '' ? "Updating..." : lastLocation}</Text>
               <TouchableOpacity onPress={fetchnew} className={`w-8 h-8 rounded-full bg-white flex justify-center items-center ${fetchnow === true ? 'animate-spin' : 'animate-none'}`}>
                 <MaterialIcons name="refresh" size={24} color="black" />
               </TouchableOpacity>
             </View>
           </View>
-          <View className=' flex mt-7 items-center'>
+          <View className=' flex items-center'>
+            <Canvas style={{ width: screenWidth, height: 220, }}>
+            <Circle cx={screenWidth/2} cy={110} r={90}>
+              <RadialGradient c={{ x: screenWidth/2, y: 110 }} r={150} colors={["red", "white"]} />
+              <Blur blur={5} />
+            </Circle>
+
             <TouchableOpacity onPress={startTimer}>
-              <Image source={sos} alt='sos' style={{ width: 180, height: 180,  borderRadius: 999, borderWidth: 8, borderColor: 'red', }} contentFit="cover"></Image>
+              <Image image={sos} x={screenWidth/2 - 80} y={110 - 80} width={160} height={160} fit="contain" />
             </TouchableOpacity>
+          </Canvas>
+          
+        <TouchableOpacity
+            onPress={startTimer}
+            style={{
+              width:160,
+              height:160,
+              borderRadius:999,
+              position: "absolute",
+              top: 110, 
+              left: screenWidth / 2,
+              transform: [
+                { translateX: -80 }, 
+                { translateY: -80 },
+              ],
+            }}
+          >
+          </TouchableOpacity>
           </View>
           <View className='w-full mt-4 p-4 '>
             <Text className='text-md text-center font-bold'>{contacts.length === 0 ? 'Add Emergency Contacts' : contacts.length + " contacts will be notified"}</Text>

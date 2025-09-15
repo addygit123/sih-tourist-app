@@ -29,7 +29,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         animation:'shift',
-        tabBarActiveTintColor: Colors.light.tint,
+        tabBarActiveTintColor: 'rgb(168 85 247)',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: Platform.select({
@@ -38,7 +38,7 @@ export default function TabLayout() {
           },
           android:{
             backgroundColor: Colors.light.background,
-            height: '12%'
+            height: '13%'
           },
           default: {},
         }),
@@ -51,6 +51,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, }) => <AntDesign size={28} name="home"  color={color} />,
         }}
       />
+       <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map', 
+          tabBarIcon: ({ color, focused }) => <MaterialDesignIcons size={28} name={ 'google-maps' } color={color} />,
+        }}
+      />      
       <Tabs.Screen
         name="explore"
         options={{
