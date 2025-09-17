@@ -1,20 +1,19 @@
-import sos from '@/assets/images/sos.png'
+import { useprofileStore } from '@/profileStore'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import { Blur, Canvas, Circle, Image, RadialGradient, useImage } from '@shopify/react-native-skia'
 import * as Battery from 'expo-battery'
-import { Image } from 'expo-image'
 import * as Location from 'expo-location'
 import * as Network from 'expo-network'
 import * as SecureStore from 'expo-secure-store'
 import * as SMS from 'expo-sms'
 import * as TaskManager from 'expo-task-manager'
-import React, { useContext, useEffect, useRef, useState } from 'react'
-import { Alert, DeviceEventEmitter, Modal, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { Alert, DeviceEventEmitter, Dimensions, Modal, Text, TouchableOpacity, View } from 'react-native'
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ContactsContext } from './_layout'
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -30,26 +29,21 @@ configureReanimatedLogger({
       return;
     }
     const net = (await Network.getNetworkStateAsync()).isInternetReachable
-
-    const p = await SecureStore.getItemAsync('profile')
-    let profile = JSON.parse(p!)
-    const oldloc = profile.lastlocation
     let cord = (data!.locations[0]).coords
-    let newloc = oldloc
+    let newloc : Location.LocationGeocodedAddress[] | string | null = [];
+
     if(net){
       newloc = await Location.reverseGeocodeAsync({latitude: cord.latitude, longitude:cord.longitude})  
       newloc = newloc[0].formattedAddress
-      let newdata =  {...profile, 'lastlocation': newloc}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
     }
 
-    DeviceEventEmitter.emit('newlocation', [newloc, cord.latitude, cord.longitude, profile.id])
+    DeviceEventEmitter.emit('newlocation', [newloc, cord.latitude, cord.longitude, useprofileStore.getState().profile.id])
     
     console.log(cord.latitude, cord.longitude);
   })
 
 const Index = () => {
+  const sos = useImage(require('@/assets/images/sos.png'))
   const timer = useRef<number|null>(null)
   const [lastLocation, setLastLocation] = useState<string | null>('')
   const [tourist, setTourist] = useState('');
@@ -57,11 +51,11 @@ const Index = () => {
   const [showmodal, setShowModal] = useState(false)
   const [time, setTimer] = useState(0)
   const [id, setId] = useState('')
-
-  const { contacts } = useContext(ContactsContext);
+  const {profile, setProfile, setCoords} = useprofileStore()
+  const {width: screenWidth, height: screenHeight} = Dimensions.get('window')
+  const { contacts } = profile;
 
   const sendsms = async ()=>{
-    //isme abhi server ko status update krna bacha h 
     await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/makeunsafe`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -70,16 +64,12 @@ const Index = () => {
 
     const isAvailable = await SMS.isAvailableAsync();
     if (isAvailable) {
-      let data = await SecureStore.getItemAsync('contacts')
-      if(data !== null){
-        let newdata = JSON.parse(data)
-        let parsed = newdata!.map((item : {'name' :string, 'number': string}) => {
-          return item.number
+      let {contacts} = profile
+      if(contacts !== null){
+        const parsed = profile.contacts.map((item: string[]) => {
+          return item[1]
         })
-
-        await SMS.sendSMSAsync(parsed, `${tourist} is in danger, last know location is : ${lastLocation}`)
-        console.log('parsed', parsed);
-        
+        await SMS.sendSMSAsync(parsed, `${tourist} is in danger, last know location is : ${lastLocation}`) 
       }
       else{
         Alert.alert('NNo emergency contacts available')
@@ -125,12 +115,7 @@ const Index = () => {
     setFetchNow(true)
     try {
       const loc = await Location.getCurrentPositionAsync()
-      const p = await SecureStore.getItemAsync('profile')
-      const data = await JSON.parse(p!)
       const add = await Location.reverseGeocodeAsync({latitude: loc.coords.latitude, longitude: loc.coords.longitude})
-      let newdata = {...data, 'lastlocation': (add[0]).formattedAddress}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
       setLastLocation((add[0]).formattedAddress)
     }
     finally{
@@ -139,44 +124,18 @@ const Index = () => {
   }
 
    const getprofile = async ()=>{
-      const p = await SecureStore.getItemAsync('profile')
-      if(p !== null){
-        const data = JSON.parse(p)
-        setTourist(data.name)
-        setId(data.id)
+      if(profile !== null){
+        setTourist(profile.name)
+        setId(profile.id)
       }
     }
 
     const fetchh = async () => {
-      console.log('helo');
-      
       const loc = await Location.getCurrentPositionAsync()
-      const p = await SecureStore.getItemAsync('profile')
-      const data = await JSON.parse(p!)
       const add = await Location.reverseGeocodeAsync({latitude: loc.coords.latitude, longitude: loc.coords.longitude})
-      let newdata = {...data, 'lastlocation': (add[0]).formattedAddress}
-      newdata = JSON.stringify(newdata)
-      await SecureStore.setItemAsync('profile', newdata)
       setLastLocation((add[0]).formattedAddress)
     }
-    //  (async () => {
 
-    //   request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION).then((status) => {
-    //     console.log(status);
-    //     if(status === RESULTS.GRANTED){
-    //       request(PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION).then((status) => {
-    //         console.log(status);
-    //       })
-
-    //       request(PERMISSIONS.ANDROID.ACCESS_BACKGROUND_LOCATION).then((status) => {
-    //         console.log(status);
-    //       })
-    //     }
-        
-    //   })
-    
-    //   })();
-      
 
   useEffect(() => {
 
@@ -192,8 +151,8 @@ const Index = () => {
         Alert.alert('background location was denied');
       }
 
-      await fetchh()
       await getprofile()
+      await fetchh()
       await Location.startLocationUpdatesAsync('getnewlocation', {
         deferredUpdatesDistance:5,
         foregroundService: {
@@ -209,7 +168,7 @@ const Index = () => {
     const sub = DeviceEventEmitter.addListener('newlocation', async (data : string[]) => { //address, lat, longn, id
       setLastLocation(data[0])
       console.log('at emitter...');
-      
+      setCoords(data[1], data[2])
       const t = await SecureStore.getItemAsync('cached');
       let cache = null;
       if(t !== null){ cache = JSON.parse(t)}
@@ -266,24 +225,48 @@ const Index = () => {
       <View className="p-4 px-6 w-full bg-white">
         <Text className="text-3xl font-bold" >Tourist App</Text>
       </View>
-      <View className="flex-1 bg-gray-100">
+      <View className="flex-1 mt-2 bg-gray-100">
         <View className='flex gap-4 justify-center'>
           <View className='w-full px-7 py-4'>
             <Text className='text-2xl '>Hello, {tourist} !</Text>
           </View>
           <View className='w-full px-7 py-2 '>
             <Text className='text-xl'>Current Location</Text>
-            <View className='flex flex-row mt-6 justify-center items-center'>
+            <View className='flex flex-row mt-5 justify-center items-center'>
               <Text className='text-md w-[90%] text-gray-500'>{lastLocation === '' ? "Updating..." : lastLocation}</Text>
               <TouchableOpacity onPress={fetchnew} className={`w-8 h-8 rounded-full bg-white flex justify-center items-center ${fetchnow === true ? 'animate-spin' : 'animate-none'}`}>
                 <MaterialIcons name="refresh" size={24} color="black" />
               </TouchableOpacity>
             </View>
           </View>
-          <View className=' flex mt-7 items-center'>
+          <View className=' flex items-center'>
+            <Canvas style={{ width: screenWidth, height: 220, }}>
+            <Circle cx={screenWidth/2} cy={110} r={90}>
+              <RadialGradient c={{ x: screenWidth/2, y: 110 }} r={150} colors={["red", "white"]} />
+              <Blur blur={5} />
+            </Circle>
+
             <TouchableOpacity onPress={startTimer}>
-              <Image source={sos} alt='sos' style={{ width: 180, height: 180,  borderRadius: 999, borderWidth: 8, borderColor: 'red', }} contentFit="cover"></Image>
+              <Image image={sos} x={screenWidth/2 - 80} y={110 - 80} width={160} height={160} fit="contain" />
             </TouchableOpacity>
+          </Canvas>
+          
+        <TouchableOpacity
+            onPress={startTimer}
+            style={{
+              width:160,
+              height:160,
+              borderRadius:999,
+              position: "absolute",
+              top: 110, 
+              left: screenWidth / 2,
+              transform: [
+                { translateX: -80 }, 
+                { translateY: -80 },
+              ],
+            }}
+          >
+          </TouchableOpacity>
           </View>
           <View className='w-full mt-4 p-4 '>
             <Text className='text-md text-center font-bold'>{contacts.length === 0 ? 'Add Emergency Contacts' : contacts.length + " contacts will be notified"}</Text>

@@ -1,13 +1,18 @@
-import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { useContext, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useprofileStore } from '@/profileStore';
+import {
+  Blur,
+  Canvas,
+  RadialGradient,
+  Rect
+} from "@shopify/react-native-skia";
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { ProfileContext } from './_layout';
+
 
 export default function SetupScreen() {
-  const router = useRouter();
-  const { setProfile } = useContext(ProfileContext);
+  const {width: WindowWidth, height: WindowHeight} = Dimensions.get('window')
+  const {setProfile, setLogin} = useprofileStore()
 
   const [loading, setLoading] = useState(false)
   const [id, setId] = useState('');
@@ -39,16 +44,13 @@ export default function SetupScreen() {
           passport: data[0].passportId,
           nationality: data[0].nationality,
           phone: data[0].touristPhone,
-          id: data[0].touristId
+          id: data[0].touristId,
+          contacts : [[data[0].emergencyContact.name, data[0].emergencyContact.phone]],
+          pnr: data[0].ticketInfo.pnr,
         }
-        const stringify  = JSON.stringify(profile) 
-
-        await SecureStore.setItemAsync('profile', stringify)
-        if(Object.keys(data[0].emergencyContact).length != 0){
-          const save = [{name: data[0].emergencyContact.name, number: data[0].emergencyContact.phone}, ]
-          await SecureStore.setItemAsync('contacts', JSON.stringify(save))
-        }
-        setProfile(true)
+        
+        setLogin(true)
+        setProfile(profile)
       }
     }
     catch(e) {
@@ -60,38 +62,43 @@ export default function SetupScreen() {
     }
   };
 
-  return (
-    <KeyboardAwareScrollView contentContainerClassName='flex-1 justify-center items-center'>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className='flex-1  justify-center items-center'>
-          <Text className="text-3xl font-bold text-center mb-8 ">Log In</Text>
+return (
+   <KeyboardAwareScrollView contentContainerClassName='flex-1 justify-center relative  items-center'>
+    <Canvas style={{ width: '100%', height: '100%'}}>
+      <Rect x={0} y={0} width={WindowWidth} height={WindowHeight}>
+        <RadialGradient c={{x: WindowWidth / 2, y: WindowHeight / 2}} r={WindowWidth/2} colors={['violet', 'white']}></RadialGradient>
+      </Rect>
+      <Blur blur={4}></Blur>
+    </Canvas>
+        <View className=' w-[80%]  absolute justify-center items-center '>
+            <Text className="text-3xl font-bold text-center mb-8 ">Log In</Text>
+            <View className='px-8 w-full'>
+              <Text className="mb-2 font-semibold">Toursit Id </Text>
+              <TextInput
+                  className="border border-gray-400 rounded-lg font-medium p-3 mb-5"
+                  value={id}
+                  onChangeText={setId}
+                  placeholder="Enter your Tourist Id"
+              />
 
-          <View className='flex w-full'>
-            <Text className="mb-2 font-medium">Toursit Id </Text>
-            <TextInput
-                className="border border-gray-300 rounded-lg p-3 mb-5"
-                value={id}
-                onChangeText={setId}
-                placeholder="Enter your Tourist Id"
-            />
+              <Text className="mb-2 font-semibold">Password </Text>
+              <TextInput
+                  className="border border-gray-400 font-medium rounded-lg p-3 mb-5"
+                  value={pass}
+                  onChangeText={setPass}
+                  keyboardType='phone-pad'
+                  placeholder="Enter password"
+              />
 
-            <Text className="mb-2 font-medium">Password </Text>
-            <TextInput
-                className="border border-gray-300 rounded-lg p-3 mb-5"
-                value={pass}
-                onChangeText={setPass}
-                keyboardType='phone-pad'
-                placeholder="Enter password"
-            />
-
-            <TouchableOpacity onPress={getTourist} className='self-center w-32 rounded-lg mt-5 bg-blue-500 p-2 flex justify-center items-center'>
-              {loading ===true ? <ActivityIndicator size='small'  color={'white'}/> : <Text className='text-lg text-white'>Log In</Text>}
-            </TouchableOpacity>
+              <TouchableOpacity onPress={getTourist} className='self-center w-32 rounded-lg mt-9 bg-purple-500 p-2 flex justify-center items-center'>
+                {loading ===true ? <ActivityIndicator size='small'  color={'white'}/> : <Text className='text-lg text-white'>Log In</Text>}
+              </TouchableOpacity>
             </View>
-        </View>
-      </TouchableWithoutFeedback>
-      </KeyboardAwareScrollView>
-  );
 
-  
+        </View>
+      </KeyboardAwareScrollView>
+  )
 }
+
+
+ 
