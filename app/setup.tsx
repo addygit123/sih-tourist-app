@@ -1,104 +1,134 @@
-import { useprofileStore } from '@/profileStore';
+import { useprofileStore } from "@/profileStore";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import { BlurView } from "expo-blur";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
-  Blur,
-  Canvas,
-  RadialGradient,
-  Rect
-} from "@shopify/react-native-skia";
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
+  ActivityIndicator,
+  Alert,
+  ImageBackground,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function SetupScreen() {
-  const {width: WindowWidth, height: WindowHeight} = Dimensions.get('window')
-  const {setProfile, setLogin} = useprofileStore()
+  const { setProfile, setLogin } = useprofileStore();
 
-  const [loading, setLoading] = useState(false)
-  const [id, setId] = useState('');
-  const [pass, setPass] = useState('');
-
+  const [loading, setLoading] = useState(false);
+  const [id, setId] = useState("");
+  const [pass, setPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const getTourist = async () => {
-    setLoading(true)
+    setLoading(true);
     if (!pass || !id) {
-      Alert.alert('Please fill in required fields: Id and Password');
-      setLoading(false)
-      return
+      Alert.alert("Please fill in required fields: Id and Password");
+      setLoading(false);
+      return;
     }
 
     try {
-      const res = await fetch(`https://smart-tourist-safety-w588.onrender.com/api/tourists/getatourist`, {
-        method:'POST',
-        headers:{'Content-Type': 'application/json'},
-        body:JSON.stringify({id})
-      })
-      let { data } = await res.json()
+      const res = await fetch(
+        `https://smart-tourist-safety-mgx9.onrender.com/api/tourists/getatourist`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        },
+      );
+      let { data } = await res.json();
       console.log(data);
-      
-      if(data.legth === 0){
-        Alert.alert("Invalid Id or Tourist is not registered!")
-      }
-      else {
+
+      if (data.legth === 0) {
+        Alert.alert("Invalid Id or Tourist is not registered!");
+      } else {
         let profile = {
           name: data[0].name,
           passport: data[0].passportId,
           nationality: data[0].nationality,
           phone: data[0].touristPhone,
           id: data[0].touristId,
-          contacts : [[data[0].emergencyContact.name, data[0].emergencyContact.phone]],
+          contacts: [
+            [data[0].emergencyContact.name, data[0].emergencyContact.phone],
+          ],
           pnr: data[0].ticketInfo.pnr,
-        }
-        
-        setLogin(true)
-        setProfile(profile)
+        };
+
+        setLogin(true);
+        setProfile(profile);
+        router.navigate("/(tabs)");
       }
-    }
-    catch(e) {
+    } catch (e) {
       console.log(e);
-      Alert.alert("Something went wrong!")
-    }
-    finally{
-      setLoading(false)
+      Alert.alert("Something went wrong!");
+    } finally {
+      setLoading(false);
     }
   };
 
-return (
-   <KeyboardAwareScrollView contentContainerClassName='flex-1 justify-center relative  items-center'>
-    <Canvas style={{ width: '100%', height: '100%'}}>
-      <Rect x={0} y={0} width={WindowWidth} height={WindowHeight}>
-        <RadialGradient c={{x: WindowWidth / 2, y: WindowHeight / 2}} r={WindowWidth/2} colors={['violet', 'white']}></RadialGradient>
-      </Rect>
-      <Blur blur={4}></Blur>
-    </Canvas>
-        <View className=' w-[80%]  absolute justify-center items-center '>
-            <Text className="text-3xl font-bold text-center mb-8 ">Log In</Text>
-            <View className='px-8 w-full'>
-              <Text className="mb-2 font-semibold">Toursit Id </Text>
-              <TextInput
-                  className="border border-gray-400 rounded-lg font-medium p-3 mb-5"
-                  value={id}
-                  onChangeText={setId}
-                  placeholder="Enter your Tourist Id"
-              />
+  return (
+    <ImageBackground
+      source={require("../assets/images/bg.png")}
+      resizeMode="cover"
+      className="flex-1"
+    >
+      <KeyboardAwareScrollView contentContainerClassName="flex-1 justify-center items-center px-6">
+        <BlurView
+          intensity={50}
+          tint="systemChromeMaterialDark"
+          className="w-full rounded-[28px] overflow-hidden p-6 border border-white/15"
+        >
+          <Text className="text-white text-4xl font-bold text-center mb-8">
+            Log In
+          </Text>
 
-              <Text className="mb-2 font-semibold">Password </Text>
-              <TextInput
-                  className="border border-gray-400 font-medium rounded-lg p-3 mb-5"
-                  value={pass}
-                  onChangeText={setPass}
-                  keyboardType='phone-pad'
-                  placeholder="Enter password"
-              />
+          <Text className="mb-2 text-white font-semibold">Tourist ID</Text>
 
-              <TouchableOpacity onPress={getTourist} className='self-center w-32 rounded-lg mt-9 bg-purple-500 p-2 flex justify-center items-center'>
-                {loading ===true ? <ActivityIndicator size='small'  color={'white'}/> : <Text className='text-lg text-white'>Log In</Text>}
-              </TouchableOpacity>
-            </View>
+          <TextInput
+            className="bg-white/90 rounded-xl px-6 p-4 mb-5 font-medium"
+            value={id}
+            onChangeText={setId}
+            placeholder="Enter your Tourist Id"
+          />
 
-        </View>
+          <Text className="mb-2 text-white font-semibold">Password</Text>
+
+          <View className="relative">
+            <TextInput
+              className=" bg-white/90 rounded-xl px-6 p-4 mb-5 font-medium"
+              value={pass}
+              onChangeText={setPass}
+              placeholder="Enter password"
+              secureTextEntry={!showPass}
+            />
+
+            <TouchableOpacity
+              className="absolute top-4 right-4"
+              onPress={() => {
+                setShowPass((prev) => !prev);
+              }}
+            >
+              {showPass && <FontAwesome5 name="eye" size={20} color="gray" />}
+              {!showPass && (
+                <FontAwesome5 name="eye-slash" size={20} color="gray" />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={getTourist}
+            className="mt-5 rounded-xl bg-purple-600 py-4 items-center"
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-lg font-bold">Log In</Text>
+            )}
+          </TouchableOpacity>
+        </BlurView>
       </KeyboardAwareScrollView>
-  )
+    </ImageBackground>
+  );
 }
-
-
- 

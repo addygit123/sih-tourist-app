@@ -1,25 +1,55 @@
-import { useprofileStore } from '@/profileStore';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import 'react-native-reanimated';
-import './global.css';
+import { Theme, ThemeProvider } from "@react-navigation/native";
+import { Stack } from "expo-router";
+import "react-native-reanimated";
+import "./global.css";
+
+const AppTheme: Theme = {
+  dark: false,
+  colors: {
+    primary: "#8B5CF6",
+    background: "#0D1020",
+    card: "#15192D",
+    text: "#FFFFFF",
+    border: "rgba(255,255,255,0.08)",
+    notification: "#6366F1",
+  },
+  fonts: {
+    regular: {
+      fontFamily: "System",
+      fontWeight: "400",
+    },
+    medium: {
+      fontFamily: "System",
+      fontWeight: "500",
+    },
+    bold: {
+      fontFamily: "System",
+      fontWeight: "700",
+    },
+    heavy: {
+      fontFamily: "System",
+      fontWeight: "800",
+    },
+  },
+};
 
 export default function RootLayout() {
-  const {login, setLogin} = useprofileStore()
-  console.log('profile', login);
-
   return (
-      <ThemeProvider value={DefaultTheme}>
-        <Stack>
-          <Stack.Protected guard={login}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack.Protected>
-
-          <Stack.Protected guard={!login}>
-            <Stack.Screen name="setup" options={{ headerShown: false }} />
-          </Stack.Protected>
-        </Stack>
-      </ThemeProvider>
-
+    <ThemeProvider value={AppTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "fade",
+          contentStyle: {
+            backgroundColor: "#0D1020",
+          },
+        }}
+      >
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="setup" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="chat" />
+      </Stack>
+    </ThemeProvider>
   );
 }
